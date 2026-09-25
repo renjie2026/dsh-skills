@@ -1,0 +1,29 @@
+# 技能是给"从未见过这个仓库的 AI"消费的：坏 frontmatter、未闭合的代码围栏、
+# name 与目录不一致，都会让技能静默失效 —— 不出现在目录里，且无任何报错。
+# 所以每次推送都跑一遍校验器，坏格式在 CI 就拦下，而不是等 AI 静默忽略。
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install js-yaml for frontmatter parsing
+        run: npm install --no-audit --no-fund
+
+      - name: Validate every skill
+        run: node validate-skills.mjs
