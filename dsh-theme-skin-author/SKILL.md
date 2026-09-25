@@ -681,10 +681,13 @@ a live list rather than a wish list.
   keeps the brand intact on a dark desktop but gives no dark adaptation at all.
 - **Audit the remaining ~55 recommended tokens** for leftovers that were derived from
   the old saturated ground rather than the new pale one.
-- **Consider the rest of the source theme set.** The source project ships six skins
-  (营慕彩云 / 江畔冬云 / 徐山军月 / 佩安杰心 / 光彩凤晨 and the two ported here) and each
-  carries an animation component with artwork this plugin has no `ambient.kind` for
-  yet. Porting them means adding kinds, not just palettes.
+- **Consider the rest of the source theme set.** The source project defines **seven** skins in
+  `admin-modular/src/utils/themes.js` — the two ported here, plus
+  **营慕彩云 / 江畔冬云 / 徐山军月 / 佩安杰心 / 光彩凤晨** (5 remaining). Each carries an animation
+  component with artwork this plugin has no `ambient.kind` for yet: today only `shan`
+  (山青婷彩) and `dream` (梦海游鱼) exist, so porting the rest means **adding kinds and their
+  artwork**, not just palettes. Source of the artwork: one `*Animation.vue` per theme under
+  `admin-modular/src/components/`.
 
 ## 15. Checklist for a new RJ skin
 

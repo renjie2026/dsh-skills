@@ -541,6 +541,50 @@ outside the app:
 | renderer CPU sustained > 1 core, RSS climbing | still spinning |
 | main/GPU abnormal | a different problem — they sit *outside* this loop |
 
+**The same bug has a SECOND shape, and it looks nothing like a spin.** Fixed in one place,
+it came back at two writers that had been missed, and this time it was loud:
+
+```
+[theme-gallery] could not stack the accent layer: RangeError: Maximum call stack size exceeded
+    at syncSkin (lib/client.js:3290)
+```
+
+**Hundreds of identical lines**, not one error. The cause is the same (`overrideTokens` →
+`theme/change` → `publish` → `overrideTokens`), but the difference is **where the loop lives**:
+
+| | Shape 1 — silent spin | Shape 2 — this one |
+|---|---|---|
+| Where the loop lives | the event loop (each round gets queued) | the **call stack** (each level nests in the previous call) |
+| How it ends | never — RSS climbs to GBs | `RangeError` when the stack is exhausted |
+| What you see | nothing at all | **the same `catch` message printed once per level** |
+
+So the flood's line count ≈ the recursion depth: **every level has its own `try/catch`**, so each
+one logs on the way out. **"The same sentence, hundreds of times" is the fingerprint of
+synchronous re-entry** — do not read it as "an intermittent error happening repeatedly".
+
+The two missed writers are the ones easy to forget, because neither looks like a theme write:
+
+- **the layer's disposer** — `layerDispose()` emits too;
+- **a second, later-added layer** (`theme-gallery: reading`) — added after the fix, and its
+  trigger was a `MutationObserver`, i.e. a loop through the **microtask queue** rather than the
+  stack: no exception, CPU burns quietly. Wrap the whole body, and remember the skip test is a
+  separate mechanism (`if (wanted === stacked) return`) that only stops *churn*, never re-entry.
+
+**The durable fix is not "remember to wrap the new one".** A rule you have to remember is not a
+rule — it is a hope, and this one failed exactly once per forgotten writer. Make a **machine**
+count every write site instead. In `dsh-theme-gallery` that is
+`tests/check-self-emit-guard.mjs` (+ `-logic.mjs`), and it is part of `npm test`:
+
+- it finds every `ctx.theme.setTheme(`, `ctx.theme.overrideTokens(` and `*Dispose(` call, and
+  requires each to sit inside the argument span of an `emitting(...)` call;
+- it allows exactly **one** reasoned exception (the slot action handed to the shell: the user's
+  click must really write, because that `theme/change` *is* how the plugin learns of the choice);
+- precedence is by **paren matching**, and comment/string contents are blanked first — locating
+  the subscriber with a plain `indexOf` finds the *prose* that mentions it (this audit lied once
+  that way before it was fixed);
+- its self-test **mutation-tests the real file**: un-guard a writer, delete the echo check, or
+  invalidate the allowlist entry, and the audit must fail.
+
 ### 3.13 Every retry/re-apply path needs a GLOBAL budget, not a per-object one
 
 **Cause.** The guard covered only one of two branches. The other branch called
