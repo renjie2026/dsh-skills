@@ -38,3 +38,7 @@ npm test        # node validate-skills.mjs
 ## License
 
 [MIT](LICENSE)
+
+---
+
+作者 & 维护：[renjie2026](https://github.com/renjie2026)
